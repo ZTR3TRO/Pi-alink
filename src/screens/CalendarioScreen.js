@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, FlatList } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { db } from '../database/initDb';
+import { colors, spacing, radius, shadow, typography, stateColor } from '../utils/theme';
 
 LocaleConfig.locales['es'] = {
   monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
   monthNamesShort: ['Ene.', 'Feb.', 'Mar', 'Abr', 'May', 'Jun', 'Jul.', 'Ago', 'Sept.', 'Oct.', 'Nov.', 'Dic.'],
-  dayNames: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
-  dayNamesShort: ['Dom.', 'Lun.', 'Mar.', 'Mié.', 'Jue.', 'Vie.', 'Sáb.'],
+  dayNames: ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'],
+  dayNamesShort: ['Dom.', 'Lun.', 'Mar.', 'Mie.', 'Jue.', 'Vie.', 'Sab.'],
   today: 'Hoy'
 };
 LocaleConfig.defaultLocale = 'es';
@@ -21,16 +22,27 @@ export default function CalendarioScreen({ navigation }) {
   const cargarDatos = () => {
     try {
       const query = `
-        SELECT pedidos.*, clientes.nombre AS nombre_cliente 
-        FROM pedidos 
+        SELECT
+          pedidos.*,
+          clientes.nombre AS nombre_cliente,
+          clientes.telefono AS telefono_cliente,
+          COALESCE(SUM(abonos.monto), 0) AS total_abonado,
+          pedidos.precio_final - COALESCE(SUM(abonos.monto), 0) AS saldo_restante
+        FROM pedidos
         JOIN clientes ON pedidos.cliente_id = clientes.id
+        LEFT JOIN abonos ON abonos.pedido_id = pedidos.id
+        GROUP BY pedidos.id
       `;
       const data = db.getAllSync(query);
       setPedidos(data);
 
       const marks = {};
       data.forEach((pedido) => {
-        marks[pedido.fecha_entrega] = { marked: true, dotColor: '#333333' };
+        const color = stateColor(pedido.estado);
+        marks[pedido.fecha_entrega] = {
+          marked: true,
+          dotColor: color,
+        };
       });
       setMarkedDates(marks);
     } catch (error) {
@@ -39,9 +51,7 @@ export default function CalendarioScreen({ navigation }) {
   };
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      cargarDatos();
-    });
+    const unsubscribe = navigation.addListener('focus', cargarDatos);
     return unsubscribe;
   }, [navigation]);
 
@@ -52,13 +62,44 @@ export default function CalendarioScreen({ navigation }) {
     }
   }, [selectedDate, pedidos]);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Text style={styles.clienteText}>{item.nombre_cliente}</Text>
-      <Text style={styles.modeloText}>{item.modelo_pinata}</Text>
-      <Text style={styles.precioText}>Restante a cobrar: ${item.precio_final}</Text>
-    </View>
-  );
+  const renderItem = ({ item }) => {
+    const colorEstado = stateColor(item.estado);
+
+    return (
+      <View style={styles.card}>
+        <View style={[styles.cardAccent, { backgroundColor: colorEstado }]} />
+        <View style={styles.cardBody}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.clienteText}>{item.nombre_cliente}</Text>
+            <View style={[styles.badge, { borderColor: colorEstado }]}>
+              <Text style={[styles.badgeText, { color: colorEstado }]}>{item.estado}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.modeloText}>{item.modelo_pinata}</Text>
+
+          {item.descripcion_detallada ? (
+            <Text style={styles.descripcionText}>{item.descripcion_detallada}</Text>
+          ) : null}
+
+          <View style={styles.pagosRow}>
+            <Text style={styles.detalleText}>Total: ${item.precio_final.toFixed(2)}</Text>
+            {item.total_abonado > 0 && (
+              <Text style={styles.detalleText}>Abonado: ${item.total_abonado.toFixed(2)}</Text>
+            )}
+          </View>
+
+          {item.saldo_restante > 0 ? (
+            <Text style={styles.saldoPendiente}>Restante: ${item.saldo_restante.toFixed(2)}</Text>
+          ) : (
+            <Text style={styles.saldoCero}>Liquidado</Text>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const totalDelDia = pedidosDelDia.reduce((acc, p) => acc + p.saldo_restante, 0);
 
   return (
     <View style={styles.container}>
@@ -66,21 +107,44 @@ export default function CalendarioScreen({ navigation }) {
         onDayPress={(day) => setSelectedDate(day.dateString)}
         markedDates={{
           ...markedDates,
-          [selectedDate]: { ...markedDates[selectedDate], selected: true, selectedColor: '#E0E0E0' }
+          [selectedDate]: {
+            ...markedDates[selectedDate],
+            selected: true,
+            selectedColor: colors.primary,
+          }
         }}
         theme={{
-          todayTextColor: '#333333',
-          arrowColor: '#333333',
-          dotColor: '#333333',
-          selectedDayTextColor: '#000000',
-          selectedDayBackgroundColor: '#E0E0E0',
+          backgroundColor: colors.surface,
+          calendarBackground: colors.surface,
+          todayTextColor: colors.accent,
+          arrowColor: colors.primary,
+          dotColor: colors.accent,
+          selectedDayTextColor: colors.surface,
+          selectedDayBackgroundColor: colors.primary,
           textDayFontWeight: '500',
+          textMonthFontFamily: 'Georgia',
+          textMonthFontWeight: '400',
+          textMonthFontSize: 16,
+          textDayHeaderFontSize: 12,
+          textDayHeaderFontWeight: '600',
+          dayTextColor: colors.textPrimary,
+          textDisabledColor: colors.textMuted,
+          monthTextColor: colors.textPrimary,
         }}
+        style={styles.calendario}
       />
-      
-      <Text style={styles.title}>
-        {selectedDate ? `Entregas para ${selectedDate}` : 'Selecciona una fecha'}
-      </Text>
+
+      <View style={styles.encabezadoDia}>
+        <Text style={styles.encabezadoTitulo}>
+          {selectedDate ? selectedDate : 'Selecciona una fecha'}
+        </Text>
+        {pedidosDelDia.length > 0 && (
+          <Text style={styles.encabezadoResumen}>
+            {pedidosDelDia.length} {pedidosDelDia.length === 1 ? 'entrega' : 'entregas'}
+            {totalDelDia > 0 ? `  •  Por cobrar: $${totalDelDia.toFixed(2)}` : '  •  Todo cobrado'}
+          </Text>
+        )}
+      </View>
 
       <FlatList
         data={pedidosDelDia}
@@ -88,7 +152,17 @@ export default function CalendarioScreen({ navigation }) {
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>No hay entregas programadas.</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyTitle}>
+              {selectedDate ? 'Sin entregas' : 'Ninguna fecha seleccionada'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {selectedDate
+                ? 'No hay pedidos programados para este dia.'
+                : 'Toca un dia en el calendario para ver sus entregas.'
+              }
+            </Text>
+          </View>
         }
       />
     </View>
@@ -98,49 +172,121 @@ export default function CalendarioScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.background,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
+  calendario: {
     borderBottomWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: colors.border,
+  },
+  encabezadoDia: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  encabezadoTitulo: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    ...typography.heading,
+  },
+  encabezadoResumen: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   list: {
-    padding: 16,
+    padding: spacing.md,
+    paddingBottom: spacing.xxl,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    ...shadow.card,
+  },
+  cardAccent: {
+    width: 5,
+  },
+  cardBody: {
+    flex: 1,
+    padding: spacing.md,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   clienteText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 4,
+    fontSize: 15,
+    color: colors.textPrimary,
+    flex: 1,
+    marginRight: spacing.sm,
+    ...typography.label,
   },
   modeloText: {
     fontSize: 14,
-    color: '#555555',
-    marginBottom: 4,
+    color: colors.textSecondary,
+    marginBottom: 2,
+    ...typography.heading,
   },
-  precioText: {
+  descripcionText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
+    fontStyle: 'italic',
+  },
+  badge: {
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  pagosRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.xs,
+  },
+  detalleText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  saldoPendiente: {
     fontSize: 14,
-    color: '#2E7D32',
-    fontWeight: '500',
+    fontWeight: '700',
+    color: colors.danger,
+    marginTop: spacing.xs,
+  },
+  saldoCero: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.success,
+    marginTop: spacing.xs,
+  },
+  emptyContainer: {
+    marginTop: spacing.xl,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
+    ...typography.heading,
   },
   emptyText: {
+    fontSize: 13,
+    color: colors.textMuted,
     textAlign: 'center',
-    color: '#888888',
-    marginTop: 20,
-    fontSize: 14,
+    lineHeight: 20,
   },
 });
