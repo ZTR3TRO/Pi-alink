@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { db } from '../database/initDb';
 
 export default function PedidosScreen({ navigation }) {
@@ -7,7 +7,13 @@ export default function PedidosScreen({ navigation }) {
 
   const cargarPedidos = () => {
     try {
-      const todosLosPedidos = db.getAllSync('SELECT * FROM pedidos ORDER BY fecha_entrega ASC;');
+      const query = `
+        SELECT pedidos.*, clientes.nombre AS nombre_cliente 
+        FROM pedidos 
+        JOIN clientes ON pedidos.cliente_id = clientes.id 
+        ORDER BY fecha_entrega ASC;
+      `;
+      const todosLosPedidos = db.getAllSync(query);
       setPedidos(todosLosPedidos);
     } catch (error) {
       console.error(error);
@@ -21,6 +27,24 @@ export default function PedidosScreen({ navigation }) {
     return unsubscribe;
   }, [navigation]);
 
+  const eliminarPedido = (id) => {
+    Alert.alert('Advertencia', '¿Estás seguro de eliminar este pedido?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { 
+        text: 'Sí, eliminar', 
+        style: 'destructive',
+        onPress: () => {
+          try {
+            db.runSync('DELETE FROM pedidos WHERE id = ?', [id]);
+            cargarPedidos();
+          } catch (error) {
+            console.error(error);
+          }
+        } 
+      }
+    ]);
+  };
+
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -29,8 +53,25 @@ export default function PedidosScreen({ navigation }) {
           <Text style={styles.badgeText}>{item.estado}</Text>
         </View>
       </View>
+      <Text style={styles.clienteText}>{item.nombre_cliente}</Text>
       <Text style={styles.detalleText}>Entrega: {item.fecha_entrega}</Text>
-      <Text style={styles.detalleText}>Precio: ${item.precio_final}</Text>
+      <Text style={styles.detalleText}>Precio Final: ${item.precio_final}</Text>
+
+      <View style={styles.cardActions}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('NuevoPedido', { pedido: item })}
+        >
+          <Text style={styles.editText}>Editar</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => eliminarPedido(item.id)}
+        >
+          <Text style={styles.deleteText}>Eliminar</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -84,12 +125,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   modeloText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333333',
+  },
+  clienteText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#444444',
+    marginBottom: 8,
   },
   badge: {
     backgroundColor: '#EEEEEE',
@@ -105,7 +152,29 @@ const styles = StyleSheet.create({
   detalleText: {
     fontSize: 14,
     color: '#666666',
-    marginTop: 4,
+    marginTop: 2,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderColor: '#EEEEEE',
+    paddingTop: 12,
+  },
+  actionButton: {
+    marginLeft: 20,
+    paddingVertical: 4,
+  },
+  editText: {
+    color: '#333333',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  deleteText: {
+    color: '#F44336',
+    fontWeight: '600',
+    fontSize: 14,
   },
   emptyContainer: {
     marginTop: 40,
