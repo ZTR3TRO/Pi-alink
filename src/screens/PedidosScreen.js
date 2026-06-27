@@ -16,6 +16,8 @@ export default function PedidosScreen({ navigation }) {
   const [busqueda, setBusqueda] = useState('');
   const [modalAbono, setModalAbono] = useState(null);
   const [montoAbono, setMontoAbono] = useState('');
+  const [expandido, setExpandido] = useState(null);
+  const [abonos, setAbonos] = useState({});
 
   const cargarDatos = () => {
     try {
@@ -42,10 +44,31 @@ export default function PedidosScreen({ navigation }) {
     }
   };
 
+  const cargarAbonos = (pedidoId) => {
+    try {
+      const data = db.getAllSync(
+        'SELECT * FROM abonos WHERE pedido_id = ? ORDER BY fecha_pago ASC;',
+        [pedidoId]
+      );
+      setAbonos(prev => ({ ...prev, [pedidoId]: data }));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', cargarDatos);
     return unsubscribe;
   }, [navigation]);
+
+  const toggleExpandido = (pedidoId) => {
+    if (expandido === pedidoId) {
+      setExpandido(null);
+    } else {
+      setExpandido(pedidoId);
+      cargarAbonos(pedidoId);
+    }
+  };
 
   const pedidosFiltrados = pedidos.filter((p) => {
     const coincideFiltro = filtroActivo === 'Todos' || p.estado === filtroActivo;
@@ -97,6 +120,7 @@ export default function PedidosScreen({ navigation }) {
         onPress: () => {
           try {
             db.runSync('DELETE FROM pedidos WHERE id = ?', [id]);
+            if (expandido === id) setExpandido(null);
             cargarDatos();
           } catch (error) {
             console.error(error);
@@ -118,6 +142,7 @@ export default function PedidosScreen({ navigation }) {
     }
     try {
       db.runSync('INSERT INTO abonos (pedido_id, monto) VALUES (?, ?)', [modalAbono.id, monto]);
+      if (expandido === modalAbono.id) cargarAbonos(modalAbono.id);
       setModalAbono(null);
       setMontoAbono('');
       cargarDatos();
@@ -152,6 +177,8 @@ export default function PedidosScreen({ navigation }) {
   const renderItem = ({ item }) => {
     const colorEstado = stateColor(item.estado);
     const esActivo = item.estado === 'Pendiente';
+    const estaExpandido = expandido === item.id;
+    const abonosDelPedido = abonos[item.id] || [];
 
     return (
       <View style={styles.card}>
@@ -179,6 +206,34 @@ export default function PedidosScreen({ navigation }) {
             <Text style={styles.saldoPendiente}>Restante: ${item.saldo_restante.toFixed(2)}</Text>
           ) : (
             <Text style={styles.saldoCero}>Liquidado</Text>
+          )}
+
+          <TouchableOpacity
+            style={styles.historialToggle}
+            onPress={() => toggleExpandido(item.id)}
+          >
+            <Text style={styles.historialToggleText}>
+              {estaExpandido ? 'Ocultar historial' : 'Ver historial de abonos'}
+            </Text>
+            <Text style={[styles.historialFlecha, estaExpandido && styles.historialFlechaAbierta]}>
+              ›
+            </Text>
+          </TouchableOpacity>
+
+          {estaExpandido && (
+            <View style={styles.historialContainer}>
+              {abonosDelPedido.length === 0 ? (
+                <Text style={styles.historialVacio}>Sin abonos registrados.</Text>
+              ) : (
+                abonosDelPedido.map((abono, index) => (
+                  <View key={abono.id} style={styles.abonoFila}>
+                    <Text style={styles.abonoNumero}>#{index + 1}</Text>
+                    <Text style={styles.abonoFecha}>{abono.fecha_pago?.split(' ')[0] || ''}</Text>
+                    <Text style={styles.abonoMonto}>${abono.monto.toFixed(2)}</Text>
+                  </View>
+                ))
+              )}
+            </View>
           )}
 
           <View style={styles.cardActions}>
@@ -423,6 +478,66 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.success,
     marginTop: spacing.xs,
+  },
+  historialToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  historialToggleText: {
+    fontSize: 13,
+    color: colors.accent,
+    fontWeight: '500',
+    flex: 1,
+  },
+  historialFlecha: {
+    fontSize: 18,
+    color: colors.accent,
+    fontWeight: '300',
+    transform: [{ rotate: '0deg' }],
+  },
+  historialFlechaAbierta: {
+    transform: [{ rotate: '90deg' }],
+  },
+  historialContainer: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.background,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.sm,
+  },
+  historialVacio: {
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
+  abonoFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs + 2,
+    borderBottomWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  abonoNumero: {
+    fontSize: 12,
+    color: colors.textMuted,
+    width: 28,
+  },
+  abonoFecha: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  abonoMonto: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '600',
+    fontFamily: 'Georgia',
   },
   cardActions: {
     flexDirection: 'row',
