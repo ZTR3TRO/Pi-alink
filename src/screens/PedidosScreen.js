@@ -291,11 +291,12 @@ export default function PedidosScreen({ navigation }) {
         />
       </View>
 
-      <ScrollView
+        <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filtrosContainer}
-      >
+        style={{ maxHeight: 36 }}
+        >
         {FILTROS.map((f) => (
           <TouchableOpacity
             key={f}
@@ -387,13 +388,15 @@ filtrosContainer: {
     paddingBottom: spacing.sm,
     gap: spacing.xs,
   },
-  filtroBtn: {
-    paddingHorizontal: spacing.sm + 4,
-    paddingVertical: spacing.xs,
+    filtroBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
+    height: 28,
+    justifyContent: 'center',
   },
   filtroBtnActivo: {
     backgroundColor: colors.primary,
