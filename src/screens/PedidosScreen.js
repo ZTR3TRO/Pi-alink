@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Linking } from 'react-native';
 import { db } from '../database/initDb';
 
 export default function PedidosScreen({ navigation }) {
   const [pedidos, setPedidos] = useState([]);
+  const [perfil, setPerfil] = useState({ mensaje_bienvenida: '' });
 
-  const cargarPedidos = () => {
+  const cargarDatos = () => {
     try {
       const query = `
         SELECT pedidos.*, clientes.nombre AS nombre_cliente 
@@ -15,6 +16,11 @@ export default function PedidosScreen({ navigation }) {
       `;
       const todosLosPedidos = db.getAllSync(query);
       setPedidos(todosLosPedidos);
+
+      const perfilData = db.getFirstSync('SELECT * FROM perfil_usuario LIMIT 1;');
+      if (perfilData) {
+        setPerfil(perfilData);
+      }
     } catch (error) {
       console.error(error);
     }
@@ -22,7 +28,7 @@ export default function PedidosScreen({ navigation }) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      cargarPedidos();
+      cargarDatos();
     });
     return unsubscribe;
   }, [navigation]);
@@ -36,13 +42,25 @@ export default function PedidosScreen({ navigation }) {
         onPress: () => {
           try {
             db.runSync('DELETE FROM pedidos WHERE id = ?', [id]);
-            cargarPedidos();
+            cargarDatos();
           } catch (error) {
             console.error(error);
           }
         } 
       }
     ]);
+  };
+
+  const enviarWhatsApp = (pedido) => {
+    const mensajeBase = perfil.mensaje_bienvenida || 'Hola, aquí tienes la información de tu pedido:';
+    
+    const texto = `${mensajeBase}\n\n*Detalle del Pedido:*\nCliente: ${pedido.nombre_cliente}\nModelo: ${pedido.modelo_pinata}\nFecha de Entrega: ${pedido.fecha_entrega}\nPrecio Final: $${pedido.precio_final}\nEstado: ${pedido.estado}`;
+    
+    const url = `whatsapp://send?text=${encodeURIComponent(texto)}`;
+    
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Error', 'No se pudo abrir WhatsApp. Verifica que la aplicación esté instalada en este dispositivo.');
+    });
   };
 
   const renderItem = ({ item }) => (
@@ -58,6 +76,13 @@ export default function PedidosScreen({ navigation }) {
       <Text style={styles.detalleText}>Precio Final: ${item.precio_final}</Text>
 
       <View style={styles.cardActions}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => enviarWhatsApp(item)}
+        >
+          <Text style={styles.waText}>WhatsApp</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity 
           style={styles.actionButton}
           onPress={() => navigation.navigate('NuevoPedido', { pedido: item })}
@@ -163,8 +188,13 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   actionButton: {
-    marginLeft: 20,
+    marginLeft: 16,
     paddingVertical: 4,
+  },
+  waText: {
+    color: '#25D366',
+    fontWeight: '600',
+    fontSize: 14,
   },
   editText: {
     color: '#333333',
