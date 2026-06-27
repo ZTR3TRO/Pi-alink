@@ -40,13 +40,11 @@ export default function PerfilScreen({ navigation }) {
 
       const pagos = db.getFirstSync(`
         SELECT
-          COALESCE(SUM(abonos.monto), 0) AS totalCobrado,
           COALESCE(SUM(pedidos.precio_final - COALESCE(sub.total_abonado, 0)), 0) AS totalPendiente
         FROM pedidos
         LEFT JOIN (
           SELECT pedido_id, SUM(monto) AS total_abonado FROM abonos GROUP BY pedido_id
         ) sub ON sub.pedido_id = pedidos.id
-        LEFT JOIN abonos ON abonos.pedido_id = pedidos.id
         WHERE pedidos.estado = 'Pendiente'
       `);
 
@@ -131,6 +129,20 @@ export default function PerfilScreen({ navigation }) {
             </Text>
           </View>
         </View>
+      </View>
+
+      <View style={styles.seccion}>
+        <Text style={styles.seccionTitulo}>Herramientas</Text>
+        <TouchableOpacity
+          style={styles.botonHerramienta}
+          onPress={() => navigation.navigate('Catalogo')}
+        >
+          <View>
+            <Text style={styles.botonHerramientaTitulo}>Catalogo de pinatas</Text>
+            <Text style={styles.botonHerramientaDesc}>Gestiona tus modelos y precios sugeridos</Text>
+          </View>
+          <Text style={styles.botonHerramientaFlecha}>›</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.seccion}>
@@ -254,6 +266,27 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: 'Georgia',
     fontWeight: '400',
+  },
+  botonHerramienta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  botonHerramientaTitulo: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  botonHerramientaDesc: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  botonHerramientaFlecha: {
+    fontSize: 22,
+    color: colors.textMuted,
+    fontWeight: '300',
   },
   label: {
     fontSize: 13,

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ScrollView, Platform
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Alert, ScrollView, Platform, Modal, FlatList
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { db } from '../database/initDb';
@@ -20,9 +20,7 @@ export default function NuevoPedidoScreen({ navigation, route }) {
   const parseDateStr = (dateStr) => {
     if (!dateStr) return new Date();
     const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return new Date(parts[0], parts[1] - 1, parts[2]);
-    }
+    if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]);
     return new Date();
   };
 
@@ -36,10 +34,25 @@ export default function NuevoPedidoScreen({ navigation, route }) {
     pedidoExistente ? parseDateStr(pedidoExistente.fecha_entrega) : new Date()
   );
   const [showPicker, setShowPicker] = useState(false);
+  const [modalCatalogo, setModalCatalogo] = useState(false);
+  const [catalogo, setCatalogo] = useState([]);
 
   const precioNum = parseFloat(precio) || 0;
   const anticipoNum = parseFloat(anticipo) || 0;
   const saldoRestante = precioNum - anticipoNum;
+
+  const cargarCatalogo = () => {
+    try {
+      const data = db.getAllSync('SELECT * FROM catalogo_pinatas ORDER BY modelo ASC;');
+      setCatalogo(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    cargarCatalogo();
+  }, []);
 
   const onChangeFecha = (event, selectedDate) => {
     setShowPicker(Platform.OS === 'ios');
@@ -47,6 +60,13 @@ export default function NuevoPedidoScreen({ navigation, route }) {
   };
 
   const validarTelefono = (tel) => tel.replace(/\D/g, '').length === 10;
+
+  const seleccionarDelCatalogo = (item) => {
+    setModelo(item.modelo);
+    setDescripcion(item.descripcion || '');
+    if (item.precio_sugerido > 0) setPrecio(item.precio_sugerido.toString());
+    setModalCatalogo(false);
+  };
 
   const guardarPedido = () => {
     if (!cliente || !modelo || !precio) {
@@ -108,6 +128,23 @@ export default function NuevoPedidoScreen({ navigation, route }) {
     }
   };
 
+  const renderItemCatalogo = ({ item }) => (
+    <TouchableOpacity
+      style={styles.catalogoItem}
+      onPress={() => seleccionarDelCatalogo(item)}
+    >
+      <View style={styles.catalogoItemInfo}>
+        <Text style={styles.catalogoItemModelo}>{item.modelo}</Text>
+        {item.descripcion ? (
+          <Text style={styles.catalogoItemDesc}>{item.descripcion}</Text>
+        ) : null}
+      </View>
+      {item.precio_sugerido > 0 && (
+        <Text style={styles.catalogoItemPrecio}>${item.precio_sugerido.toFixed(2)}</Text>
+      )}
+    </TouchableOpacity>
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
@@ -143,7 +180,14 @@ export default function NuevoPedidoScreen({ navigation, route }) {
       <View style={styles.seccion}>
         <Text style={styles.seccionTitulo}>Pedido</Text>
 
-        <Text style={styles.label}>Modelo de pinata *</Text>
+        <View style={styles.modeloHeader}>
+          <Text style={styles.label}>Modelo de pinata *</Text>
+          {catalogo.length > 0 && (
+            <TouchableOpacity onPress={() => setModalCatalogo(true)}>
+              <Text style={styles.linkCatalogo}>Elegir del catalogo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <TextInput
           style={styles.input}
           value={modelo}
@@ -232,6 +276,28 @@ export default function NuevoPedidoScreen({ navigation, route }) {
         </Text>
       </TouchableOpacity>
 
+      <Modal visible={modalCatalogo} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Catalogo de pinatas</Text>
+              <TouchableOpacity onPress={() => setModalCatalogo(false)}>
+                <Text style={styles.modalCerrar}>Cerrar</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={catalogo}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderItemCatalogo}
+              ItemSeparatorComponent={() => <View style={styles.separador} />}
+              ListEmptyComponent={
+                <Text style={styles.catalogoVacio}>No hay modelos en el catalogo.</Text>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
   );
 }
@@ -269,6 +335,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     ...typography.label,
   },
+  modeloHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  linkCatalogo: {
+    fontSize: 13,
+    color: colors.accent,
+    fontWeight: '600',
+  },
   input: {
     backgroundColor: colors.background,
     borderWidth: 1,
@@ -299,7 +376,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
     fontFamily: 'Georgia',
-    fontWeight: '400',
   },
   resumenPago: {
     flexDirection: 'row',
@@ -338,5 +414,73 @@ const styles = StyleSheet.create({
     color: colors.surface,
     fontSize: 16,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(44, 26, 14, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    maxHeight: '70%',
+    paddingBottom: spacing.xxl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 16,
+    color: colors.textPrimary,
+    ...typography.heading,
+  },
+  modalCerrar: {
+    fontSize: 14,
+    color: colors.accent,
+    fontWeight: '600',
+  },
+  catalogoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  catalogoItemInfo: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  catalogoItemModelo: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    fontWeight: '500',
+  },
+  catalogoItemDesc: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  catalogoItemPrecio: {
+    fontSize: 15,
+    color: colors.primary,
+    fontFamily: 'Georgia',
+  },
+  separador: {
+    height: 1,
+    backgroundColor: colors.borderLight,
+    marginHorizontal: spacing.md,
+  },
+  catalogoVacio: {
+    textAlign: 'center',
+    color: colors.textMuted,
+    padding: spacing.xl,
+    fontSize: 14,
   },
 });

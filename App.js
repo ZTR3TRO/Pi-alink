@@ -10,6 +10,7 @@ import PedidosScreen from './src/screens/PedidosScreen';
 import CalendarioScreen from './src/screens/CalendarioScreen';
 import PerfilScreen from './src/screens/PerfilScreen';
 import NuevoPedidoScreen from './src/screens/NuevoPedidoScreen';
+import CatalogoScreen from './src/screens/CatalogoScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -140,6 +141,11 @@ export default function App() {
           options={({ route }) => ({
             title: route.params?.pedido ? 'Editar pedido' : 'Nuevo pedido',
           })}
+        />
+        <Stack.Screen
+          name="Catalogo"
+          component={CatalogoScreen}
+          options={{ title: 'Catalogo de pinatas' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
