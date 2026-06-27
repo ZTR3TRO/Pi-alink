@@ -1,51 +1,46 @@
 export const colors = {
-  background: '#FDF6EE',
+  background: '#FAFAF8',
   surface: '#FFFFFF',
-  border: '#E8D9C8',
-  borderLight: '#F0E6D8',
+  border: '#E6E0D8',
+  borderLight: '#EDE9E4',
 
-  primary: '#4A2C17',
-  primaryLight: '#6B4226',
+  primary: '#3D2B1F',
+  primaryLight: '#5C4033',
 
-  accent: '#D4713A',
-  accentLight: '#F0956A',
+  accent: '#B85C38',
+  accentLight: '#D4795A',
 
-  textPrimary: '#2C1A0E',
-  textSecondary: '#7A5C44',
-  textMuted: '#A88B6E',
+  textPrimary: '#1E1208',
+  textSecondary: '#6B5748',
+  textMuted: '#9E8C80',
 
-  statePendiente: '#D4713A',
-  stateEntregado: '#4A7C3F',
-  stateCancelado: '#8A8A8A',
+  statePendiente: '#B85C38',
+  stateEntregado: '#3D6B47',
+  stateCancelado: '#8A8480',
 
-  danger: '#C0392B',
-  dangerLight: '#FFECEB',
-  success: '#4A7C3F',
-  successLight: '#EBF5EB',
+  danger: '#A63228',
+  dangerLight: '#FDECEA',
+  success: '#3D6B47',
+  successLight: '#EAF2EC',
 
   whatsapp: '#25D366',
-  pdf: '#1565C0',
+  pdf: '#1A56A0',
 };
 
 export const typography = {
   display: {
-    fontFamily: 'Georgia',
     fontWeight: '700',
   },
   heading: {
-    fontFamily: 'Georgia',
-    fontWeight: '400',
+    fontWeight: '500',
   },
   body: {
-    fontFamily: undefined,
     fontWeight: '400',
   },
   label: {
-    fontFamily: undefined,
     fontWeight: '500',
   },
   caption: {
-    fontFamily: undefined,
     fontWeight: '400',
   },
 };
@@ -68,18 +63,18 @@ export const radius = {
 
 export const shadow = {
   card: {
-    shadowColor: '#4A2C17',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#3D2B1F',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
   fab: {
-    shadowColor: '#4A2C17',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowColor: '#3D2B1F',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
 };
 

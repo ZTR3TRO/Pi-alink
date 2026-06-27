@@ -382,14 +382,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textPrimary,
   },
-  filtrosContainer: {
+filtrosContainer: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   filtroBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.xs,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   filtroText: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
     fontWeight: '500',
   },

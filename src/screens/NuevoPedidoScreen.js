@@ -54,8 +54,8 @@ export default function NuevoPedidoScreen({ navigation, route }) {
     cargarCatalogo();
   }, []);
 
-  const onChangeFecha = (event, selectedDate) => {
-    setShowPicker(Platform.OS === 'ios');
+    const onChangeFecha = (event, selectedDate) => {
+    setShowPicker(false);
     if (selectedDate) setFechaEntrega(selectedDate);
   };
 
@@ -216,7 +216,7 @@ export default function NuevoPedidoScreen({ navigation, route }) {
           <DateTimePicker
             value={fechaEntrega}
             mode="date"
-            display="default"
+            display="spinner"
             onChange={onChangeFecha}
           />
         )}
